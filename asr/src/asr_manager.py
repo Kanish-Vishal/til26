@@ -20,7 +20,7 @@ class ASRManager:
         num_workers = int(os.getenv("ASR_NUM_WORKERS", "1"))
 
         self.beam_size = int(os.getenv("ASR_BEAM_SIZE", "5"))
-        self.vad_filter = os.getenv("ASR_VAD_FILTER", "false").lower() == "true"
+        self.vad_filter = os.getenv("ASR_VAD_FILTER", "true").lower() == "true"
         self.model = WhisperModel(
             model_size,
             device=device,
@@ -42,17 +42,27 @@ class ASRManager:
         audio_file = BytesIO(audio_bytes)
         audio_file.name = "audio.wav"
 
-        segments, _ = self.model.transcribe(
+        segments, info = self.model.transcribe(
             audio_file,
             task="transcribe",
             beam_size=self.beam_size,
             best_of=5,
-            temperature=[0.0, 0.2, 0.4],
+            temperature=[0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
             condition_on_previous_text=False,
             vad_filter=self.vad_filter,
         )
 
-        return " ".join(segment.text.strip() for segment in segments).strip()
+        transcription = " ".join(segment.text.strip() for segment in segments).strip()
+
+        # Normalize Chinese transcriptions to Simplified Chinese (Singapore/CN standard)
+        if info is not None and info.language == "zh":
+            try:
+                import zhconv
+                transcription = zhconv.convert(transcription, "zh-hans")
+            except ImportError:
+                pass
+
+        return transcription
 
     @staticmethod
     def _default_device() -> str:
