@@ -30,13 +30,19 @@ async def asr(request: Request) -> dict[str, list[str]]:
 
     predictions = []
     for instance in inputs_json["instances"]:
+        try:
+            # Reads the base-64 encoded audio and decodes it into bytes.
+            audio_bytes = base64.b64decode(instance["b64"])
 
-        # Reads the base-64 encoded audio and decodes it into bytes.
-        audio_bytes = base64.b64decode(instance["b64"])
-
-        # Performs ASR and appends the result.
-        transcription = manager.asr(audio_bytes)
-        predictions.append(transcription)
+            # Performs ASR and appends the result.
+            transcription = manager.asr(audio_bytes)
+            predictions.append(transcription)
+        except Exception as e:
+            import traceback
+            print(f"Error occurred during ASR transcription for instance {instance.get('key', 'unknown')}: {e}")
+            traceback.print_exc()
+            # Append an empty string or dummy fallback instead of crashing the entire request batch
+            predictions.append("error")
 
     return {"predictions": predictions}
 
