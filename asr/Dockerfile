@@ -10,12 +10,14 @@ FROM nvcr.io/nvidia/pytorch:25.11-py3
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV PIP_ROOT_USER_ACTION=ignore
+ENV HF_HOME=/workspace/.cache/huggingface
 WORKDIR /workspace
 
 # Installs your dependencies.
 RUN pip install -U pip
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+RUN python -c "from faster_whisper import WhisperModel; WhisperModel('large-v3', device='cpu', compute_type='int8')"
 
 # Copies your source files.
 COPY src .
